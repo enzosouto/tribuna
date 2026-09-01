@@ -121,7 +121,7 @@ export default function HomePage() {
               <Image src="/logo.png" alt="Tribuna" width={180} height={180} priority />
             </motion.div>
             <motion.p variants={item} className="max-w-md text-balance text-xl text-foreground/90 sm:text-2xl">
-              &ldquo;Dê uma nota para seus jogos, veja opinião dos outros e compartilhe.&rdquo;
+              Dê uma nota para seus jogos, veja opinião dos outros e compartilhe.
             </motion.p>
             <motion.div variants={item}>
               <Button size="lg" asChild>
