@@ -10,3 +10,6 @@ build/
 .turbo/
 coverage/
 apps/api/uploads/
+
+.vercel
+.env*
