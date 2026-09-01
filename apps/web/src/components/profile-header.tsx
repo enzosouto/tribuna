@@ -5,14 +5,20 @@ import { FollowButton } from "@/components/follow-button";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatDateShort, formatRating } from "@/lib/utils";
 
-const STATS: { key: keyof UserPublic; label: string }[] = [
-  { key: "matchesCount", label: "Partidas" },
-  { key: "reviewsCount", label: "Reviews" },
-  { key: "followersCount", label: "Seguidores" },
-  { key: "followingCount", label: "Seguindo" },
+const STATS: { key: keyof UserPublic; label: string; tab: string }[] = [
+  { key: "matchesCount", label: "Partidas", tab: "matches" },
+  { key: "reviewsCount", label: "Reviews", tab: "reviews" },
+  { key: "followersCount", label: "Seguidores", tab: "followers" },
+  { key: "followingCount", label: "Seguindo", tab: "following" },
 ];
 
-export function ProfileHeader({ user }: { user: UserPublic }) {
+export function ProfileHeader({
+  user,
+  onStatClick,
+}: {
+  user: UserPublic;
+  onStatClick?: (tab: string) => void;
+}) {
   return (
     <div className="border-b border-border/60 pb-6">
       <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -39,10 +45,15 @@ export function ProfileHeader({ user }: { user: UserPublic }) {
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
         {STATS.map((stat) => (
-          <div key={stat.key} className="rounded-xl border border-border/60 bg-card p-3 text-center">
+          <button
+            key={stat.key}
+            type="button"
+            onClick={() => onStatClick?.(stat.tab)}
+            className="rounded-xl border border-border/60 bg-card p-3 text-center transition-colors hover:border-primary/50"
+          >
             <p className="font-display text-2xl text-primary">{user[stat.key] as number}</p>
             <p className="text-xs text-muted-foreground">{stat.label}</p>
-          </div>
+          </button>
         ))}
         <div className="rounded-xl border border-border/60 bg-card p-3 text-center">
           <p className="font-display text-2xl text-primary">{formatRating(user.averageRating)}</p>

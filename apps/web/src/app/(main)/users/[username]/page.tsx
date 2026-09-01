@@ -1,11 +1,15 @@
 "use client";
 
-import type { ListSummary, PaginatedResult, Review, UserPublic } from "@tribuna/shared";
+import type { DiaryEntry, ListSummary, PaginatedResult, Review, UserPublic } from "@tribuna/shared";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import useSWR from "swr";
 import { ListCard } from "@/components/list-card";
 import { ProfileHeader } from "@/components/profile-header";
+import { RatingStars } from "@/components/rating-stars";
 import { ReviewCard } from "@/components/review-card";
+import { TeamBadge } from "@/components/team-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCard } from "@/components/user-card";
 import { EmptyState, ErrorState, GridSkeleton } from "@/components/states";
@@ -13,9 +17,14 @@ import { fetcher } from "@/lib/api-client";
 
 export default function UserProfilePage() {
   const params = useParams<{ username: string }>();
+  const [tab, setTab] = useState("reviews");
   const { data: profile, error, isLoading } = useSWR<UserPublic>(`/users/${params.username}`, fetcher);
   const { data: reviewsData } = useSWR<PaginatedResult<Review>>(
     profile ? `/reviews?username=${params.username}&pageSize=30` : null,
+    fetcher,
+  );
+  const { data: matchesData } = useSWR<DiaryEntry[]>(
+    profile ? `/users/${params.username}/matches` : null,
     fetcher,
   );
   const { data: lists } = useSWR<ListSummary[]>(profile ? `/users/${params.username}/lists` : null, fetcher);
@@ -40,13 +49,16 @@ export default function UserProfilePage() {
 
   return (
     <div className="container space-y-6 py-6">
-      <ProfileHeader user={profile} />
+      <ProfileHeader user={profile} onStatClick={setTab} />
 
-      <Tabs defaultValue="reviews">
+      <Tabs value={tab} onValueChange={setTab}>
         <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:overflow-visible sm:px-0">
           <TabsList className="w-max flex-nowrap">
             <TabsTrigger value="reviews" className="whitespace-nowrap">
               Reviews
+            </TabsTrigger>
+            <TabsTrigger value="matches" className="whitespace-nowrap">
+              Partidas
             </TabsTrigger>
             <TabsTrigger value="lists" className="whitespace-nowrap">
               Listas
@@ -66,6 +78,37 @@ export default function UserProfilePage() {
             <div className="rounded-2xl border border-border bg-card px-5">
               {reviewsData.items.map((r) => (
                 <ReviewCard key={r.id} review={r} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="matches">
+          {matchesData && matchesData.length === 0 && <EmptyState title="Nenhuma partida avaliada ainda" />}
+          {matchesData && matchesData.length > 0 && (
+            <div className="space-y-2">
+              {matchesData.map((entry) => (
+                <Link
+                  key={entry.ratingId}
+                  href={`/matches/${entry.match.id}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center -space-x-2">
+                      <TeamBadge team={entry.match.homeTeam} size={32} />
+                      <TeamBadge team={entry.match.awayTeam} size={32} />
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {entry.match.homeTeam.shortName ?? entry.match.homeTeam.name}{" "}
+                        {entry.match.homeScore ?? "-"} × {entry.match.awayScore ?? "-"}{" "}
+                        {entry.match.awayTeam.shortName ?? entry.match.awayTeam.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{entry.match.competition.name}</p>
+                    </div>
+                  </div>
+                  <RatingStars value={entry.ratingValue} readOnly size={16} />
+                </Link>
               ))}
             </div>
           )}

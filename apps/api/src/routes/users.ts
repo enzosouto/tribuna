@@ -1,13 +1,18 @@
 import { changePasswordSchema, updateProfileSchema } from "@tribuna/shared";
 import { count, desc, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import { db } from "../db/client.js";
-import { follows, lists, users } from "../db/schema.js";
+import { competitions, follows, lists, matches, ratings, teams, users } from "../db/schema.js";
 import { conflict, notFound, unauthorized } from "../lib/errors.js";
+import { toCompetition, toTeam } from "../lib/mappers.js";
 import { requireAuth } from "../lib/require-auth.js";
 import { fetchUserPublic } from "../lib/user-profile.js";
+
+const homeTeams = alias(teams, "profile_home_teams");
+const awayTeams = alias(teams, "profile_away_teams");
 
 export async function usersRoutes(app: FastifyInstance) {
   app.get("/", async (request, reply) => {
@@ -115,6 +120,51 @@ export async function usersRoutes(app: FastifyInstance) {
 
     const profiles = await Promise.all(rows.map((r) => fetchUserPublic(r.followee.id, request.userId)));
     reply.send(profiles.filter(Boolean));
+  });
+
+  app.get("/:username/matches", async (request, reply) => {
+    const { username } = z.object({ username: z.string() }).parse(request.params);
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.username, username)).limit(1);
+    if (!user) throw notFound("User not found");
+
+    const rows = await db
+      .select({
+        rating: ratings,
+        match: matches,
+        homeTeam: homeTeams,
+        awayTeam: awayTeams,
+        competition: competitions,
+      })
+      .from(ratings)
+      .innerJoin(matches, eq(ratings.matchId, matches.id))
+      .innerJoin(homeTeams, eq(matches.homeTeamId, homeTeams.id))
+      .innerJoin(awayTeams, eq(matches.awayTeamId, awayTeams.id))
+      .innerJoin(competitions, eq(matches.competitionId, competitions.id))
+      .where(eq(ratings.userId, user.id))
+      .orderBy(desc(matches.dateTime));
+
+    reply.send(
+      rows.map((row) => ({
+        ratingId: row.rating.id,
+        ratingValue: Number(row.rating.value),
+        ratedAt: row.rating.updatedAt.toISOString(),
+        match: {
+          id: row.match.id,
+          externalId: row.match.externalId,
+          homeTeam: toTeam(row.homeTeam),
+          awayTeam: toTeam(row.awayTeam),
+          homeScore: row.match.homeScore,
+          awayScore: row.match.awayScore,
+          competition: toCompetition(row.competition),
+          round: row.match.round,
+          stadium: row.match.stadium,
+          dateTime: row.match.dateTime.toISOString(),
+          status: row.match.status,
+          averageRating: null,
+          ratingsCount: 0,
+        },
+      })),
+    );
   });
 
   app.get("/:username/lists", async (request, reply) => {
