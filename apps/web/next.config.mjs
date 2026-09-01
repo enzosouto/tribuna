@@ -1,5 +1,10 @@
+const API_ORIGIN = "https://tribuna-api.onrender.com";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${API_ORIGIN}/:path*` }];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "crests.football-data.org" },
