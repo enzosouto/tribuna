@@ -34,7 +34,6 @@ export function Navbar() {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <Image src="/logo.png" alt="Tribuna" width={36} height={36} />
-            <span className="font-display text-xl tracking-wide">Tribuna</span>
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
             {LINKS.map((link) => (
