@@ -7,8 +7,20 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const bebas = Bebas_Neue({ subsets: ["latin"], weight: "400", variable: "--font-bebas" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://tribuna-web.vercel.app"),
   title: "Tribuna",
   description: "Descubra partidas, avalie jogos, escreva reviews e acompanhe seu diário de futebol.",
+  openGraph: {
+    title: "Tribuna",
+    description: "Descubra partidas, avalie jogos, escreva reviews e acompanhe seu diário de futebol.",
+    images: [{ url: "/link.png" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tribuna",
+    description: "Descubra partidas, avalie jogos, escreva reviews e acompanhe seu diário de futebol.",
+    images: ["/link.png"],
+  },
 };
 
 export const viewport: Viewport = {
