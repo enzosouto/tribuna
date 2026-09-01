@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const bebas = Bebas_Neue({ subsets: ["latin"], weight: "400", variable: "--font-bebas" });
 
 export const metadata: Metadata = {
-  title: "Tribuna — Sua rede social de futebol",
+  title: "Tribuna",
   description: "Descubra partidas, avalie jogos, escreva reviews e acompanhe seu diário de futebol.",
 };
 
