@@ -3,7 +3,7 @@
 import { LogOut, Settings, Shield, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,7 +26,6 @@ const LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, isLoading, logout } = useAuth();
 
   return (
@@ -95,7 +94,7 @@ export function Navbar() {
                 <DropdownMenuItem
                   onSelect={async () => {
                     await logout();
-                    router.push("/");
+                    window.location.href = "/";
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" /> Sair
