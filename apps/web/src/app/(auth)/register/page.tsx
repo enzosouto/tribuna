@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { HexagonGallery } from "@/components/hexagon-gallery";
@@ -95,9 +96,8 @@ export default function RegisterPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               value={form.password}
               onChange={(e) => update("password", e.target.value)}
               required
@@ -105,9 +105,8 @@ export default function RegisterPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirmar senha</Label>
-            <Input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               value={form.confirmPassword}
               onChange={(e) => update("confirmPassword", e.target.value)}
               required
