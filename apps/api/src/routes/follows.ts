@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db/client.js";
-import { follows, users } from "../db/schema.js";
+import { follows, notifications, users } from "../db/schema.js";
 import { badRequest, conflict, notFound } from "../lib/errors.js";
 import { requireAuth } from "../lib/require-auth.js";
 
@@ -23,6 +23,11 @@ export async function followsRoutes(app: FastifyInstance) {
     if (existing) throw conflict("Already following this user");
 
     await db.insert(follows).values({ followerId, followingId: target.id });
+    await db.insert(notifications).values({
+      recipientId: target.id,
+      actorId: followerId,
+      type: "FOLLOW",
+    });
     reply.status(201).send({ following: true });
   });
 

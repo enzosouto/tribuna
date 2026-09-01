@@ -17,6 +17,19 @@ export interface UserPublic {
   role?: "user" | "admin";
 }
 
+export interface Notification {
+  id: string;
+  type: "FOLLOW";
+  read: boolean;
+  createdAt: string;
+  actor: {
+    id: string;
+    username: string;
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
 export interface Team {
   id: string;
   externalId: string | null;

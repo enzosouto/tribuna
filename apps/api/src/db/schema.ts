@@ -36,6 +36,8 @@ export const lineupRoleEnum = pgEnum("lineup_role", ["STARTER", "SUBSTITUTE", "C
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "banned"]);
 
+export const notificationTypeEnum = pgEnum("notification_type", ["FOLLOW"]);
+
 export const users = pgTable(
   "users",
   {
@@ -311,6 +313,28 @@ export const follows = pgTable(
   }),
 );
 
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum("type").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    recipientCreatedIdx: index("notifications_recipient_created_idx").on(
+      t.recipientId,
+      t.createdAt,
+    ),
+  }),
+);
+
 export const watchlist = pgTable(
   "watchlist",
   {
@@ -381,6 +405,16 @@ export const usersRelations = relations(users, ({ many }) => ({
   following: many(follows, { relationName: "follower" }),
   watchlist: many(watchlist),
   lists: many(lists),
+  notifications: many(notifications, { relationName: "recipient" }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  recipient: one(users, {
+    fields: [notifications.recipientId],
+    references: [users.id],
+    relationName: "recipient",
+  }),
+  actor: one(users, { fields: [notifications.actorId], references: [users.id] }),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({

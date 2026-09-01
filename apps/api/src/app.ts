@@ -17,6 +17,7 @@ import { followsRoutes } from "./routes/follows.js";
 import { healthRoutes } from "./routes/health.js";
 import { listsRoutes } from "./routes/lists.js";
 import { matchesRoutes } from "./routes/matches.js";
+import { notificationsRoutes } from "./routes/notifications.js";
 import { ratingsRoutes } from "./routes/ratings.js";
 import { reviewsRoutes } from "./routes/reviews.js";
 import { searchRoutes } from "./routes/search.js";
@@ -95,6 +96,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reviewsRoutes, { prefix: "/reviews" });
   await app.register(ratingsRoutes, { prefix: "/ratings" });
   await app.register(followsRoutes, { prefix: "/follows" });
+  await app.register(notificationsRoutes, { prefix: "/notifications" });
   await app.register(watchlistRoutes, { prefix: "/watchlist" });
   await app.register(diaryRoutes, { prefix: "/diary" });
   await app.register(favoritesRoutes, { prefix: "/favorites" });

@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationBell } from "@/components/notification-bell";
 import { SearchBar } from "@/components/search-bar";
 import { UserAvatar } from "@/components/user-avatar";
 import { useAuth } from "@/lib/auth-context";
@@ -67,6 +68,7 @@ export function Navbar() {
               </Button>
             </>
           )}
+          {user && <NotificationBell />}
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
