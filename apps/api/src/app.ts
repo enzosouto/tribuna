@@ -3,7 +3,6 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import sensible from "@fastify/sensible";
-import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 import { SESSION_COOKIE, getSessionUserId } from "./auth/session.js";
@@ -23,7 +22,7 @@ import { reviewsRoutes } from "./routes/reviews.js";
 import { searchRoutes } from "./routes/search.js";
 import { syncRoutes } from "./routes/sync.js";
 import { teamsRoutes } from "./routes/teams.js";
-import { UPLOAD_DIR, uploadsRoutes } from "./routes/uploads.js";
+import { uploadsRoutes } from "./routes/uploads.js";
 import { usersRoutes } from "./routes/users.js";
 import { watchlistRoutes } from "./routes/watchlist.js";
 
@@ -53,10 +52,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
   await app.register(multipart, {
     limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  });
-  await app.register(fastifyStatic, {
-    root: UPLOAD_DIR,
-    prefix: "/uploads/",
   });
 
   app.decorateRequest("userId", null);
