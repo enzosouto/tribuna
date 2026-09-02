@@ -6,7 +6,13 @@ import type { FootballProvider, NormalizedMatch } from "./types.js";
 // Well-known soccer league ids on TheSportsDB. The free public test key only returns
 // the single most recent past event and the single next upcoming event per league, so
 // we spread across many leagues/cups to get a reasonably sized real dataset.
+// Brazil-relevant leagues go first: the free key's shared rate limit starts dropping
+// requests partway through this list (see fetchWithRetry below), so anything after
+// roughly position 15 is at risk of silently getting zero events some runs.
 const LEAGUE_IDS = [
+  "4351", // Brazilian Serie A
+  "4725", // Copa do Brasil
+  "4501", // Copa Libertadores
   "4328", // English Premier League
   "4335", // Spanish La Liga
   "4331", // German Bundesliga
@@ -18,17 +24,14 @@ const LEAGUE_IDS = [
   "4346", // Major League Soccer
   "4429", // FIFA World Cup
   "4406", // Argentine Primera Division
-  "4351", // Brazilian Serie A
   "4330", // Scottish Premiership
   "4329", // English Championship
   "4394", // Italian Serie B
   "4395", // Scottish Championship
-  "4501", // Copa Libertadores
   "4502", // UEFA European Championship
   "4570", // EFL Cup
   "4497", // Colombia Primera A
   "4498", // FIFA Confederations Cup
-  "4725", // Copa do Brasil
 ];
 
 // TheSportsDB returns league names in English; localize the ones we care about for a

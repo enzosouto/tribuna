@@ -90,9 +90,11 @@ function ExploreContent() {
         <section>
           <SectionHeader title="Competições" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {competitions.map((c) => (
-              <CompetitionCard key={c.id} competition={c} />
-            ))}
+            {[...competitions]
+              .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+              .map((c) => (
+                <CompetitionCard key={c.id} competition={c} />
+              ))}
           </div>
         </section>
       )}
