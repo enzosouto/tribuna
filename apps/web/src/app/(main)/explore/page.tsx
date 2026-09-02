@@ -99,7 +99,7 @@ function ExploreContent() {
 
       {popularUsers && popularUsers.length > 0 && (
         <section>
-          <SectionHeader title="Usuários" />
+          <SectionHeader title="Usuários" href="/admin" hrefLabel="Ver mais" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {popularUsers.map((u) => (
               <UserCard key={u.id} user={u} />

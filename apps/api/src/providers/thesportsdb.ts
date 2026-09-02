@@ -89,6 +89,19 @@ function mapStatus(raw: string | null, hasScore: boolean): MatchStatus {
   return "SCHEDULED";
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The free public test key ("3") is shared globally and rate-limits hard: firing all
+// ~20 leagues' requests back-to-back reliably starts returning 429 partway through,
+// which silently starved leagues later in LEAGUE_IDS of any data. Retry once on 429
+// after a short backoff, and pace requests between leagues so we stay under the limit.
+async function fetchWithRetry(url: string): Promise<Response> {
+  const res = await fetch(url);
+  if (res.status !== 429) return res;
+  await sleep(1500);
+  return fetch(url);
+}
+
 export class TheSportsDbProvider implements FootballProvider {
   name = "thesportsdb" as const;
 
@@ -97,9 +110,11 @@ export class TheSportsDbProvider implements FootballProvider {
     const results: NormalizedMatch[] = [];
 
     for (const leagueId of LEAGUE_IDS) {
+      if (leagueId !== LEAGUE_IDS[0]) await sleep(300);
+
       const [pastRes, nextRes] = await Promise.all([
-        fetch(`https://www.thesportsdb.com/api/v1/json/${key}/eventspastleague.php?id=${leagueId}`),
-        fetch(`https://www.thesportsdb.com/api/v1/json/${key}/eventsnextleague.php?id=${leagueId}`),
+        fetchWithRetry(`https://www.thesportsdb.com/api/v1/json/${key}/eventspastleague.php?id=${leagueId}`),
+        fetchWithRetry(`https://www.thesportsdb.com/api/v1/json/${key}/eventsnextleague.php?id=${leagueId}`),
       ]);
 
       const [pastData, nextData] = await Promise.all([

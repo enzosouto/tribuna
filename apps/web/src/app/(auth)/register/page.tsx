@@ -85,10 +85,21 @@ export default function RegisterPage() {
             <Input
               id="username"
               value={form.username}
-              onChange={(e) => update("username", e.target.value.toLowerCase())}
+              onChange={(e) =>
+                update(
+                  "username",
+                  e.target.value
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-z0-9_]/g, "")
+                    .slice(0, 20),
+                )
+              }
               placeholder="seu_usuario"
               required
             />
+            <p className="text-xs text-muted-foreground">3-20 caracteres: letras minúsculas, números e _</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
