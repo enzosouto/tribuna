@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Compass, Home, ListVideo, User as UserIcon } from "lucide-react";
+import { BookMarked, Compass, Home, ListChecks, ListVideo, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -15,12 +15,13 @@ export function MobileNavbar() {
     { href: "/explore", label: "Explorar", icon: Compass },
     { href: "/watchlist", label: "Watchlist", icon: BookMarked },
     { href: "/diary", label: "Diário", icon: ListVideo },
+    { href: "/lists", label: "Listas", icon: ListChecks },
     { href: user ? `/users/${user.username}` : "/login", label: "Perfil", icon: UserIcon },
   ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-black/95 backdrop-blur-md md:hidden">
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-6">
         {items.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const Icon = item.icon;
