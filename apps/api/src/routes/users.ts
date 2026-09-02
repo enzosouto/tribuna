@@ -8,6 +8,7 @@ import { db } from "../db/client.js";
 import { competitions, follows, lists, matches, ratings, teams, users } from "../db/schema.js";
 import { conflict, notFound, unauthorized } from "../lib/errors.js";
 import { toCompetition, toTeam } from "../lib/mappers.js";
+import { requireAdmin } from "../lib/require-admin.js";
 import { requireAuth } from "../lib/require-auth.js";
 import { fetchUserPublic } from "../lib/user-profile.js";
 
@@ -16,6 +17,7 @@ const awayTeams = alias(teams, "profile_away_teams");
 
 export async function usersRoutes(app: FastifyInstance) {
   app.get("/", async (request, reply) => {
+    await requireAdmin(request);
     const query = z
       .object({ sort: z.enum(["popular"]).default("popular"), pageSize: z.coerce.number().int().min(1).max(50).default(10) })
       .parse(request.query);

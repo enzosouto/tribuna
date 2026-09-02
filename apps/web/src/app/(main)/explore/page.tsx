@@ -11,6 +11,7 @@ import { MatchCard } from "@/components/match-card";
 import { UserCard } from "@/components/user-card";
 import { EmptyState, GridSkeleton } from "@/components/states";
 import { SectionHeader } from "@/components/section-header";
+import { useAuth } from "@/lib/auth-context";
 import { fetcher } from "@/lib/api-client";
 
 const SORTS = [
@@ -21,6 +22,8 @@ const SORTS = [
 ] as const;
 
 function ExploreContent() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const searchParams = useSearchParams();
   const competitionId = searchParams.get("competitionId") ?? undefined;
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("popular");
@@ -35,7 +38,7 @@ function ExploreContent() {
 
   const { data, isLoading } = useSWR<PaginatedResult<MatchSummary>>(`/matches?${query.toString()}`, fetcher);
   const { data: competitions } = useSWR<Competition[]>("/competitions", fetcher);
-  const { data: popularUsers } = useSWR<UserPublic[]>("/users?sort=popular&pageSize=6", fetcher);
+  const { data: popularUsers } = useSWR<UserPublic[]>(isAdmin ? "/users?sort=popular&pageSize=6" : null, fetcher);
 
   return (
     <div className="container space-y-10 py-6">

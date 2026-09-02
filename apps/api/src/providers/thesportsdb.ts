@@ -28,6 +28,7 @@ const LEAGUE_IDS = [
   "4570", // EFL Cup
   "4497", // Colombia Primera A
   "4498", // FIFA Confederations Cup
+  "4725", // Copa do Brasil
 ];
 
 // TheSportsDB returns league names in English; localize the ones we care about for a
@@ -54,6 +55,7 @@ const COMPETITION_NAME_PT: Record<string, string> = {
   "4570": "EFL Cup",
   "4497": "Categoría Primera A (Colômbia)",
   "4498": "Copa das Confederações",
+  "4725": "Copa do Brasil",
 };
 
 interface TheSportsDbEvent {
