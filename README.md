@@ -113,15 +113,39 @@ npm run build
 
 O backend restringe CORS à origem definida em `FRONTEND_URL`. Atualize essa variável no Render sempre que o domínio da Vercel mudar.
 
-### 5. Cron de sincronização (opcional, produção)
+### 5. Sincronização de partidas
 
-Quando `FOOTBALL_API_PROVIDER` for `football-data` ou `thesportsdb`, configure um **Cron Job** no Render chamando:
+A sincronização roda **dentro do próprio processo da API** (`apps/api/src/providers/scheduler.ts`):
+uma vez no boot e depois a cada `SYNC_INTERVAL_MINUTES` (padrão: 10). Não é preciso configurar
+cron nenhum — basta que `FOOTBALL_API_PROVIDER` seja diferente de `mock`.
+
+Variáveis relacionadas:
+
+| Variável | Padrão | Efeito |
+| --- | --- | --- |
+| `SYNC_ENABLED` | `true` | `false` desliga o agendador |
+| `SYNC_INTERVAL_MINUTES` | `10` | Intervalo entre sincronizações |
+| `SYNC_SECRET` | — | Se definida, libera `POST /sync/matches` com o header `x-sync-secret` |
+
+Duas sincronizações nunca rodam em paralelo: uma chamada durante uma execução em andamento
+espera pelo resultado dela.
+
+Cada execução termina com um passo de **backfill**: partidas que já começaram, continuam sem
+placar e não aparecem mais na janela que o provedor devolve (a TheSportsDB só expõe os últimos
+eventos de cada liga) são buscadas uma a uma pelo id. O resultado só é gravado se o confronto
+devolvido bater com o armazenado — ids se repetem entre provedores.
+
+**Sincronização manual** (admin autenticado, ou cron externo usando `SYNC_SECRET`):
 
 ```
 POST https://<seu-backend>.onrender.com/sync/matches
+GET  https://<seu-backend>.onrender.com/sync/status
 ```
 
-periodicamente (ex: a cada 30 minutos) para manter partidas, placares e status atualizados.
+No plano gratuito do Render o serviço hiberna após um período sem tráfego, e o agendador
+para junto. A sincronização de boot cobre esse caso: o primeiro acesso reacorda o processo
+e os dados são atualizados na sequência. Para manter a atualização contínua de verdade, use
+um plano que não hiberne ou um ping externo.
 
 ## Football providers
 

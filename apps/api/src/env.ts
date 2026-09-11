@@ -10,6 +10,16 @@ const envSchema = z.object({
   FOOTBALL_API_PROVIDER: z.enum(["mock", "football-data", "thesportsdb", "mix"]).default("mock"),
   FOOTBALL_DATA_API_KEY: z.string().optional(),
   THESPORTSDB_API_KEY: z.string().optional(),
+  // Background match sync. On by default so a deploy can't silently serve stale scores;
+  // the scheduler still no-ops when the provider is `mock`.
+  SYNC_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
+  SYNC_INTERVAL_MINUTES: z.coerce.number().int().min(1).default(10),
+  // When set, allows an external cron to POST /sync/matches with this value in the
+  // `x-sync-secret` header. Without it, that route is admin-only.
+  SYNC_SECRET: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().optional(),
   SMTP_USER: z.string().optional(),

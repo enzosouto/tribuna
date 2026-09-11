@@ -79,4 +79,21 @@ export interface NormalizedMatch {
 export interface FootballProvider {
   name: FootballProviderName;
   fetchMatches(): Promise<NormalizedMatch[]>;
+  /**
+   * Resolves a single match by the external id we already stored.
+   *
+   * `fetchMatches` only returns whatever window the upstream exposes (TheSportsDB gives
+   * the last handful of events per league), so a match whose result landed after it fell
+   * out of that window would stay scoreless forever. This is the escape hatch the
+   * backfill pass uses to go get those results by id.
+   *
+   * Returns null when the provider doesn't know the id. Ids are only unique per
+   * upstream, so a provider may well answer with an entirely different fixture; pass
+   * `isExpected` so a multi-upstream provider can discard those and keep looking, and
+   * check the result again at the call site.
+   */
+  lookupMatch?(
+    externalId: string,
+    isExpected?: (candidate: NormalizedMatch) => boolean,
+  ): Promise<NormalizedMatch | null>;
 }

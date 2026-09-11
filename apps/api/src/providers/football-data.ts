@@ -31,6 +31,8 @@ const STATUS_MAP: Record<string, MatchStatus> = {
   TIMED: "TIMED",
   IN_PLAY: "LIVE",
   PAUSED: "LIVE",
+  EXTRA_TIME: "LIVE",
+  PENALTY_SHOOTOUT: "LIVE",
   FINISHED: "FINISHED",
   SUSPENDED: "POSTPONED",
   POSTPONED: "POSTPONED",
@@ -61,8 +63,81 @@ function teamShortNameFor(id: number, apiShortName: string | null): string | nul
   return apiShortName;
 }
 
+// The free tier allows ten requests per minute. `fetchMatches` only spends two of those,
+// but the backfill can ask for many single matches in a row, so single-match lookups are
+// spaced out to stay under the limit instead of collecting 429s.
+const LOOKUP_MIN_INTERVAL_MS = 6500;
+let lastLookupAt = 0;
+let lookupChain: Promise<void> = Promise.resolve();
+
+function throttleLookup(): Promise<void> {
+  lookupChain = lookupChain.then(async () => {
+    const wait = LOOKUP_MIN_INTERVAL_MS - (Date.now() - lastLookupAt);
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastLookupAt = Date.now();
+  });
+  return lookupChain;
+}
+
+function toNormalizedMatch(m: FootballDataMatch): NormalizedMatch {
+  return {
+    externalId: String(m.id),
+    homeTeam: {
+      externalId: String(m.homeTeam.id),
+      name: teamNameFor(m.homeTeam.id, m.homeTeam.name),
+      shortName: teamShortNameFor(m.homeTeam.id, m.homeTeam.shortName ?? null),
+      crestUrl: m.homeTeam.crest ?? null,
+      country: null,
+    },
+    awayTeam: {
+      externalId: String(m.awayTeam.id),
+      name: teamNameFor(m.awayTeam.id, m.awayTeam.name),
+      shortName: teamShortNameFor(m.awayTeam.id, m.awayTeam.shortName ?? null),
+      crestUrl: m.awayTeam.crest ?? null,
+      country: null,
+    },
+    homeScore: m.score.fullTime.home,
+    awayScore: m.score.fullTime.away,
+    competition: {
+      externalId: String(m.competition.id),
+      name: COMPETITION_NAME_PT[m.competition.code] ?? m.competition.name,
+      code: m.competition.code ?? null,
+      emblemUrl: m.competition.emblem ?? null,
+      country: null,
+    },
+    season: {
+      year: m.season?.startDate ? m.season.startDate.slice(0, 4) : "unknown",
+      startDate: m.season?.startDate ?? null,
+      endDate: m.season?.endDate ?? null,
+    },
+    round: m.matchday ? `Rodada ${m.matchday}` : null,
+    stadium: m.venue ?? null,
+    dateTime: m.utcDate,
+    status: STATUS_MAP[m.status] ?? "SCHEDULED",
+    events: [],
+    statistics: [],
+    lineups: [],
+  };
+}
+
 export class FootballDataProvider implements FootballProvider {
   name = "football-data" as const;
+
+  async lookupMatch(externalId: string): Promise<NormalizedMatch | null> {
+    if (!env.FOOTBALL_DATA_API_KEY) return null;
+    // Ids here are always numeric; anything else is an id from another upstream and
+    // would just burn one of the ten requests per minute the free tier allows.
+    if (!/^\d+$/.test(externalId)) return null;
+
+    await throttleLookup();
+    const res = await fetch(`${BASE_URL}/matches/${externalId}`, {
+      headers: { "X-Auth-Token": env.FOOTBALL_DATA_API_KEY },
+    });
+    if (!res.ok) return null;
+    const match = (await res.json()) as FootballDataMatch;
+    if (!match?.id || !match.homeTeam?.name || !match.awayTeam?.name) return null;
+    return toNormalizedMatch(match);
+  }
 
   async fetchMatches(): Promise<NormalizedMatch[]> {
     if (!env.FOOTBALL_DATA_API_KEY) {
@@ -98,43 +173,6 @@ export class FootballDataProvider implements FootballProvider {
     // with a null team name — not a real, displayable match yet, so skip those.
     const playable = Array.from(byId.values()).filter((m) => m.homeTeam?.name && m.awayTeam?.name);
 
-    return playable.map((m) => ({
-      externalId: String(m.id),
-      homeTeam: {
-        externalId: String(m.homeTeam.id),
-        name: teamNameFor(m.homeTeam.id, m.homeTeam.name),
-        shortName: teamShortNameFor(m.homeTeam.id, m.homeTeam.shortName ?? null),
-        crestUrl: m.homeTeam.crest ?? null,
-        country: null,
-      },
-      awayTeam: {
-        externalId: String(m.awayTeam.id),
-        name: teamNameFor(m.awayTeam.id, m.awayTeam.name),
-        shortName: teamShortNameFor(m.awayTeam.id, m.awayTeam.shortName ?? null),
-        crestUrl: m.awayTeam.crest ?? null,
-        country: null,
-      },
-      homeScore: m.score.fullTime.home,
-      awayScore: m.score.fullTime.away,
-      competition: {
-        externalId: String(m.competition.id),
-        name: COMPETITION_NAME_PT[m.competition.code] ?? m.competition.name,
-        code: m.competition.code ?? null,
-        emblemUrl: m.competition.emblem ?? null,
-        country: null,
-      },
-      season: {
-        year: m.season?.startDate ? m.season.startDate.slice(0, 4) : "unknown",
-        startDate: m.season?.startDate ?? null,
-        endDate: m.season?.endDate ?? null,
-      },
-      round: m.matchday ? `Rodada ${m.matchday}` : null,
-      stadium: m.venue ?? null,
-      dateTime: m.utcDate,
-      status: STATUS_MAP[m.status] ?? "SCHEDULED",
-      events: [],
-      statistics: [],
-      lineups: [],
-    }));
+    return playable.map(toNormalizedMatch);
   }
 }

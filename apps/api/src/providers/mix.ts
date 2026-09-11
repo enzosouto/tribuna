@@ -27,6 +27,32 @@ function isSameFixture(a: NormalizedMatch, b: NormalizedMatch): boolean {
 export class MixProvider implements FootballProvider {
   name = "mix" as const;
 
+  // Stored matches don't record which upstream they came from and the two id spaces
+  // overlap, so an id has to be tried against both. TheSportsDB goes first because its
+  // narrow past-events window is what strands matches in the first place; football-data
+  // is only asked when TheSportsDB has nothing, keeping us well inside its 10 requests
+  // per minute. The caller checks the answer against the stored fixture before writing
+  // it (see sync.ts), which is what makes trying an id on the wrong upstream safe.
+  async lookupMatch(
+    externalId: string,
+    isExpected?: (candidate: NormalizedMatch) => boolean,
+  ): Promise<NormalizedMatch | null> {
+    const providers = [new TheSportsDbProvider(), new FootballDataProvider()];
+    for (const provider of providers) {
+      const candidate = await provider.lookupMatch(externalId).catch((err) => {
+        console.warn(
+          `[mix] ${provider.name} lookup of ${externalId} failed:`,
+          err instanceof Error ? err.message : err,
+        );
+        return null;
+      });
+      // A hit that describes some other fixture means this id belongs to the other
+      // upstream — keep going rather than reporting the wrong match.
+      if (candidate && (!isExpected || isExpected(candidate))) return candidate;
+    }
+    return null;
+  }
+
   async fetchMatches(): Promise<NormalizedMatch[]> {
     const [theSportsDbMatches, footballDataMatches] = await Promise.all([
       new TheSportsDbProvider().fetchMatches().catch((err) => {

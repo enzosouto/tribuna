@@ -105,8 +105,72 @@ async function fetchWithRetry(url: string): Promise<Response> {
   return fetch(url);
 }
 
+// Some events come back with a missing or malformed date/time. Left unguarded, the
+// `.toISOString()` below throws "Invalid time value" and takes down the whole fetch
+// (every league after it included), so fall back to midnight and then to skipping.
+function kickoffIsoOrNull(e: TheSportsDbEvent): string | null {
+  for (const candidate of [`${e.dateEvent}T${e.strTime ?? "00:00:00"}Z`, `${e.dateEvent}T00:00:00Z`]) {
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  return null;
+}
+
+function toNormalizedMatch(e: TheSportsDbEvent, dateTime: string): NormalizedMatch {
+  const hasScore = e.intHomeScore !== null && e.intAwayScore !== null;
+  return {
+    externalId: e.idEvent,
+    homeTeam: {
+      externalId: e.idHomeTeam,
+      name: COUNTRY_NAME_PT[e.strHomeTeam] ?? e.strHomeTeam,
+      shortName: null,
+      crestUrl: e.strHomeTeamBadge ?? null,
+      country: null,
+    },
+    awayTeam: {
+      externalId: e.idAwayTeam,
+      name: COUNTRY_NAME_PT[e.strAwayTeam] ?? e.strAwayTeam,
+      shortName: null,
+      crestUrl: e.strAwayTeamBadge ?? null,
+      country: null,
+    },
+    homeScore: hasScore ? Number(e.intHomeScore) : null,
+    awayScore: hasScore ? Number(e.intAwayScore) : null,
+    competition: {
+      externalId: e.idLeague,
+      name: COMPETITION_NAME_PT[e.idLeague] ?? e.strLeague,
+      code: null,
+      emblemUrl: null,
+      country: null,
+    },
+    season: { year: e.strSeason ?? "unknown", startDate: null, endDate: null },
+    round: e.intRound ? `Rodada ${e.intRound}` : null,
+    stadium: e.strVenue ?? null,
+    dateTime,
+    status: mapStatus(e.strStatus, hasScore),
+    events: [],
+    statistics: [],
+    lineups: [],
+  };
+}
+
 export class TheSportsDbProvider implements FootballProvider {
   name = "thesportsdb" as const;
+
+  // lookupevent.php resolves any event id, including ones long gone from the
+  // past-events window that fetchMatches reads.
+  async lookupMatch(externalId: string): Promise<NormalizedMatch | null> {
+    const key = env.THESPORTSDB_API_KEY || "3";
+    const res = await fetchWithRetry(
+      `https://www.thesportsdb.com/api/v1/json/${key}/lookupevent.php?id=${encodeURIComponent(externalId)}`,
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { events: TheSportsDbEvent[] | null };
+    const event = data.events?.[0];
+    if (!event) return null;
+    const dateTime = kickoffIsoOrNull(event);
+    return dateTime ? toNormalizedMatch(event, dateTime) : null;
+  }
 
   async fetchMatches(): Promise<NormalizedMatch[]> {
     const key = env.THESPORTSDB_API_KEY || "3"; // "3" is the public test key
@@ -135,41 +199,9 @@ export class TheSportsDbProvider implements FootballProvider {
       ];
 
       for (const e of events) {
-        const hasScore = e.intHomeScore !== null && e.intAwayScore !== null;
-        results.push({
-          externalId: e.idEvent,
-          homeTeam: {
-            externalId: e.idHomeTeam,
-            name: COUNTRY_NAME_PT[e.strHomeTeam] ?? e.strHomeTeam,
-            shortName: null,
-            crestUrl: e.strHomeTeamBadge ?? null,
-            country: null,
-          },
-          awayTeam: {
-            externalId: e.idAwayTeam,
-            name: COUNTRY_NAME_PT[e.strAwayTeam] ?? e.strAwayTeam,
-            shortName: null,
-            crestUrl: e.strAwayTeamBadge ?? null,
-            country: null,
-          },
-          homeScore: hasScore ? Number(e.intHomeScore) : null,
-          awayScore: hasScore ? Number(e.intAwayScore) : null,
-          competition: {
-            externalId: e.idLeague,
-            name: COMPETITION_NAME_PT[e.idLeague] ?? e.strLeague,
-            code: null,
-            emblemUrl: null,
-            country: null,
-          },
-          season: { year: e.strSeason ?? "unknown", startDate: null, endDate: null },
-          round: e.intRound ? `Rodada ${e.intRound}` : null,
-          stadium: e.strVenue ?? null,
-          dateTime: new Date(`${e.dateEvent}T${e.strTime ?? "00:00:00"}Z`).toISOString(),
-          status: mapStatus(e.strStatus, hasScore),
-          events: [],
-          statistics: [],
-          lineups: [],
-        });
+        const dateTime = kickoffIsoOrNull(e);
+        if (!dateTime) continue;
+        results.push(toNormalizedMatch(e, dateTime));
       }
     }
 
